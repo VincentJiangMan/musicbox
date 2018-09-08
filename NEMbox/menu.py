@@ -10,7 +10,7 @@ from __future__ import (
 )
 
 import time
-import curses
+from . import unicurses as curses
 import threading
 import sys
 import os
@@ -103,14 +103,14 @@ class Menu(object):
         self.ui = Ui()
         self.api = NetEase()
         self.screen = curses.initscr()
-        self.screen.keypad(1)
+        curses.keypad(self.screen, 1)
         self.step = 10
         self.stack = []
         self.djstack = []
         self.at_playing_list = False
         self.enter_flag = True
-        signal.signal(signal.SIGWINCH, self.change_term)
-        signal.signal(signal.SIGINT, self.send_kill)
+        # signal.signal(signal.SIGWINCH, self.change_term)
+        # signal.signal(signal.SIGINT, self.send_kill)
         self.menu_starts = time.time()
         self.countdown_start = time.time()
         self.countdown = -1
@@ -156,7 +156,7 @@ class Menu(object):
             return self.login()
 
     def search(self, category):
-        self.ui.screen.timeout(-1)
+        curses.wtimeout(self.ui.screen, -1)
         SearchArg = namedtuple('SearchArg', ['prompt', 'api_type', 'post_process'])
         category_map = {
             'songs': SearchArg(
@@ -181,8 +181,8 @@ class Menu(object):
         return self.api.dig_info(datalist, category)
 
     def change_term(self, signum, frame):
-        self.ui.screen.clear()
-        self.ui.screen.refresh()
+        curses.wclear(self.ui.screen)
+        curses.wrefresh(self.ui.screen)
 
     def send_kill(self, signum, fram):
         self.player.stop()
@@ -216,11 +216,12 @@ class Menu(object):
             return 0
 
     def start_fork(self, version):
-        pid = os.fork()
-        if pid == 0:
-            Menu().update_alert(version)
-        else:
-            Menu().start()
+        # pid = os.fork()
+        # if pid == 0:
+        #     Menu().update_alert(version)
+        # else:
+        #     Menu().start()
+        Menu().start()
 
     def play_pause(self):
         if self.player.is_empty:
@@ -256,9 +257,9 @@ class Menu(object):
             offset = self.offset
             idx = self.index
             step = self.step
-            self.screen.timeout(500)
-            key = self.screen.getch()
-            self.ui.screen.refresh()
+            curses.wtimeout(self.screen, 500)
+            key = curses.wgetch(self.screen)
+            curses.wrefresh(self.ui.screen)
 
             # term resize
             if key == -1:

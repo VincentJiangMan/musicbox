@@ -6,10 +6,11 @@
 from __future__ import (
     print_function, unicode_literals, division, absolute_import
 )
-import curses
 import traceback
 import argparse
 import sys
+
+from . import unicurses as curses
 
 from future.builtins import str
 

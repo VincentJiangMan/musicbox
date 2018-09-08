@@ -11,7 +11,7 @@ from __future__ import (
 
 import hashlib
 import re
-import curses
+from . import unicurses as curses
 import datetime
 
 from future.builtins import range, str, int
@@ -48,10 +48,10 @@ class Ui(object):
 
     def __init__(self):
         self.screen = curses.initscr()
-        self.screen.timeout(100)  # the screen refresh every 100ms
+        curses.wtimeout(self.screen, 100)  # the screen refresh every 100ms
         # charactor break buffer
         curses.cbreak()
-        self.screen.keypad(1)
+        curses.keypad(self.screen, 1)
 
         curses.start_color()
         if Config().get('curses_transparency'):
@@ -83,10 +83,10 @@ class Ui(object):
 
     def addstr(self, *args):
         if len(args) == 1:
-            self.screen.addstr(args[0])
+            curses.waddstr(self.screen, args[0])
         else:
             try:
-                self.screen.addstr(args[0], args[1], args[2].encode('utf-8'), *args[3:])
+                curses.mvwaddstr(self.screen, args[0], args[1], args[2], *args[3:])
             except Exception as e:
                 log.error(e)
     def build_playinfo(self,
@@ -98,10 +98,10 @@ class Ui(object):
                        pause=False):
         curses.noecho()
         # refresh top 2 line
-        self.screen.move(1, 1)
-        self.screen.clrtoeol()
-        self.screen.move(2, 1)
-        self.screen.clrtoeol()
+        curses.wmove(self.screen, 1, 1)
+        curses.wclrtoeol(self.screen)
+        curses.wmove(self.screen, 2, 1)
+        curses.wclrtoeol(self.screen)
         if pause:
             self.addstr(1, self.indented_startcol,
                         '_ _ z Z Z ' + quality, curses.color_pair(3))
@@ -114,7 +114,7 @@ class Ui(object):
             song_name + self.space + artist + '  < ' + album_name + ' >',
             curses.color_pair(4))
 
-        self.screen.refresh()
+        curses.wrefresh(self.screen)
 
     def build_process_bar(self,
                           song,
@@ -129,12 +129,12 @@ class Ui(object):
         lyrics, tlyrics = song.get('lyric', []), song.get('tlyric', [])
 
         curses.noecho()
-        self.screen.move(3, 1)
-        self.screen.clrtoeol()
-        self.screen.move(4, 1)
-        self.screen.clrtoeol()
-        self.screen.move(5, 1)
-        self.screen.clrtoeol()
+        curses.wmove(self.screen, 3, 1)
+        curses.wclrtoeol(self.screen)
+        curses.wmove(self.screen, 4, 1)
+        curses.wclrtoeol(self.screen)
+        curses.wmove(self.screen, 5, 1)
+        curses.wclrtoeol(self.screen)
         if total_length <= 0:
             total_length = 1
         if now_playing > total_length or now_playing <= 0:
@@ -231,12 +231,12 @@ class Ui(object):
                         curses.A_DIM)
             self.addstr(5, self.startcol + 1, str(self.now_lyric),
                         curses.color_pair(3))
-        self.screen.refresh()
+        curses.wrefresh(self.screen)
 
     def build_loading(self):
         self.addstr(7, self.startcol, '享受高品质音乐，loading...',
                     curses.color_pair(1))
-        self.screen.refresh()
+        curses.wrefresh(self.screen)
 
     def build_submenu(self, data):
         pass
@@ -246,13 +246,13 @@ class Ui(object):
                    start):
         # keep playing info in line 1
         curses.noecho()
-        self.screen.move(7, 1)
-        self.screen.clrtobot()
+        curses.wmove(self.screen, 7, 1)
+        curses.wclrtobot(self.screen)
         self.addstr(7, self.startcol, title, curses.color_pair(1))
 
         if len(datalist) == 0:
             self.addstr(8, self.startcol, '这里什么都没有 -，-')
-            return self.screen.refresh()
+            return curses.wrefresh(self.screen)
 
         if datatype == 'main':
             for i in range(offset, min(len(datalist), offset + step)):
@@ -413,9 +413,9 @@ class Ui(object):
                         str(i) + '. ' + datalist[i]['name'])
 
         elif datatype == 'search':
-            self.screen.move(6, 1)
-            self.screen.clrtobot()
-            self.screen.timeout(-1)
+            curses.wmove(self.screen, 6, 1)
+            curses.wclrtobot(self.screen)
+            curses.wtimeout(self.screen, -1)
             self.addstr(8, self.startcol, '选择搜索类型:',
                         curses.color_pair(1))
             for i in range(offset, min(len(datalist), offset + step)):
@@ -427,7 +427,7 @@ class Ui(object):
                 else:
                     self.addstr(i - offset + 10, self.startcol,
                                 str(i) + '.' + datalist[i - 1])
-            self.screen.timeout(100)
+            curses.wtimeout(self.screen, 100)
 
         elif datatype == 'help':
             for i in range(offset, min(len(datalist), offset + step)):
@@ -452,7 +452,7 @@ class Ui(object):
             self.addstr(22, self.startcol,
                         'Build with love to music by omi')
 
-        self.screen.refresh()
+        curses.wrefresh(self.screen)
 
     def build_login(self):
         self.build_login_bar()
@@ -462,67 +462,67 @@ class Ui(object):
 
     def build_login_bar(self):
         curses.noecho()
-        self.screen.move(4, 1)
-        self.screen.clrtobot()
+        curses.wmove(self.screen, 4, 1)
+        curses.wclrtobot(self.screen)
         self.addstr(5, self.startcol, '请输入登录信息(支持手机登录)',
                     curses.color_pair(1))
         self.addstr(8, self.startcol, '账号:', curses.color_pair(1))
         self.addstr(9, self.startcol, '密码:', curses.color_pair(1))
-        self.screen.move(8, 24)
-        self.screen.refresh()
+        curses.wmove(self.screen, 8, 24)
+        curses.wrefresh(self.screen)
 
     def build_login_error(self):
-        self.screen.move(4, 1)
-        self.screen.timeout(-1)  # disable the screen timeout
-        self.screen.clrtobot()
+        curses.wmove(self.screen, 4, 1)
+        curses.wtimeout(self.screen, -1)  # disable the screen timeout
+        curses.wclrtobot(self.screen)
         self.addstr(8, self.startcol, '艾玛，登录信息好像不对呢 (O_O)#',
                     curses.color_pair(1))
         self.addstr(10, self.startcol, '[1] 再试一次')
         self.addstr(11, self.startcol, '[2] 稍后再试')
         self.addstr(14, self.startcol, '请键入对应数字:', curses.color_pair(2))
-        self.screen.refresh()
-        x = self.screen.getch()
-        self.screen.timeout(100)  # restore the screen timeout
+        curses.wrefresh(self.screen)
+        x = curses.wgetch(self.screen)
+        curses.wtimeout(self.screen, 100)  # restore the screen timeout
         return x
 
     def build_timing(self):
-        self.screen.move(6, 1)
-        self.screen.clrtobot()
-        self.screen.timeout(-1)
+        curses.wmove(self.screen, 6, 1)
+        curses.wclrtobot(self.screen)
+        curses.wtimeout(self.screen, -1)
         self.addstr(8, self.startcol, '输入定时时间(min):',
                     curses.color_pair(1))
         self.addstr(11, self.startcol, 'ps:定时时间为整数，输入0代表取消定时退出',
                     curses.color_pair(1))
-        self.screen.timeout(-1)  # disable the screen timeout
+        curses.wtimeout(self.screen, -1)  # disable the screen timeout
         curses.echo()
-        timing_time = self.screen.getstr(8, self.startcol + 19, 60)
-        self.screen.timeout(100)  # restore the screen timeout
+        timing_time = curses.mvwgetstr(self.screen, 8, self.startcol + 19)
+        curses.wtimeout(self.screen, 100)  # restore the screen timeout
         return timing_time
 
     def get_account(self):
-        self.screen.timeout(-1)  # disable the screen timeout
+        curses.wtimeout(self.screen, -1)  # disable the screen timeout
         curses.echo()
-        account = self.screen.getstr(8, self.startcol + 6, 60)
-        self.screen.timeout(100)  # restore the screen timeout
-        return account.decode('utf-8')
+        account = curses.mvwgetstr(self.screen, 8, self.startcol + 6)
+        curses.wtimeout(self.screen, 100)  # restore the screen timeout
+        return account
 
     def get_password(self):
-        self.screen.timeout(-1)  # disable the screen timeout
+        curses.wtimeout(self.screen, -1)  # disable the screen timeout
         curses.noecho()
-        password = self.screen.getstr(9, self.startcol + 6, 60)
-        self.screen.timeout(100)  # restore the screen timeout
-        return password.decode('utf-8')
+        password = curses.mvwgetstr(self.screen, 9, self.startcol + 6)
+        curses.wtimeout(self.screen, 100)  # restore the screen timeout
+        return password
 
     def get_param(self, prompt_string):
         # keep playing info in line 1
         curses.echo()
-        self.screen.move(4, 1)
-        self.screen.clrtobot()
+        curses.wmove(self.screen, 4, 1)
+        curses.wclrtobot(self.screen)
         self.addstr(5, self.startcol, prompt_string,
                     curses.color_pair(1))
-        self.screen.refresh()
-        keyword = self.screen.getstr(10, self.startcol, 60)
-        return keyword.decode('utf-8').strip()
+        curses.wrefresh(self.screen)
+        keyword = curses.mvwgetstr(self.screen, 10, self.startcol)
+        return keyword.strip()
 
     def update_size(self):
         # get terminal size
@@ -534,12 +534,12 @@ class Ui(object):
         self.x, self.y = x, y
 
         # update intendations
-        curses.resizeterm(self.y, self.x)
+        curses.wresize(self.screen, self.y, self.x)
         self.startcol = int(float(self.x) / 5)
         self.indented_startcol = max(self.startcol - 3, 0)
         self.update_space()
-        self.screen.clear()
-        self.screen.refresh()
+        curses.wclear(self.screen)
+        curses.wrefresh(self.screen)
 
     def update_space(self):
         if self.x > 140:
@@ -548,4 +548,4 @@ class Ui(object):
             self.space = '  -  '
         else:
             self.space = ' - '
-        self.screen.refresh()
+        curses.wrefresh(self.screen)

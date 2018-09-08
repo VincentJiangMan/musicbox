@@ -52,10 +52,15 @@ setup(
     description=about['__description__'],
     license=about['__license__'],
     packages=find_packages(),
+    package_data={
+        'NEMbox': ['mpg123-1.25.10-static-x86/*.*'],
+        'NEMbox.unicurses': ['pdc34dllu/*.dll', ]
+    },
     install_requires=[
         'requests-cache',
         'pycryptodomex',
         'future',
+        'pywin32',
     ],
     entry_points={
         'console_scripts': [

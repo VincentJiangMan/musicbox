@@ -12,22 +12,24 @@ from __future__ import (
     print_function, unicode_literals, division, absolute_import
 )
 
+from io import BytesIO
+import os
+import random
 import subprocess
 import threading
 import time
-import os
-import random
+from os import path
 
 from future.builtins import str
 
-from .ui import Ui
-from .storage import Storage
+from .win32pipe import Win32PipeIO
+from . import logger
 from .api import NetEase
 from .cache import Cache
 from .config import Config
+from .storage import Storage
+from .ui import Ui
 from .utils import notify
-
-from . import logger
 
 log = logger.getLogger(__name__)
 
@@ -207,28 +209,60 @@ class Player(object):
 
         self.build_playinfo()
 
+    def accumulate_read(self, read_buf):
+        if not self.popen_handler:
+            res = read_buf.read().decode('utf-8').strip()
+            read_buf.close()
+            return res
+
+        out = self.popen_handler.stdout.readline()
+        if not out:
+            return ''
+
+        newline = out.find(b'\n')
+        if newline > 0:
+            res = (read_buf.read() + out[:newline + 1]).decode('utf-8').strip()
+            read_buf.write(out[newline + 1:])
+        else:
+            res = ''
+            read_buf.write(out)
+        return res
+
     def run_mpg123(self, on_exit, url):
-        para = ['mpg123', '-R'] + self.config_mpg123
+        mpg123_path = path.join(path.dirname(path.abspath(__file__)), 'mpg123-1.25.10-static-x86', 'mpg123.exe')
+
+        para = [mpg123_path, '--fifo', Win32PipeIO.pipe_name('mpg123_pipe'), '-R', '--utf8'] + self.config_mpg123
         self.popen_handler = subprocess.Popen(
             para,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
+        time.sleep(2)
+        pipe = Win32PipeIO('mpg123_pipe', pipetype='client')
+        self.popen_handler.stdin = pipe
 
         self.tune_volume()
-        self.popen_handler.stdin.write(b'L ' + url.encode('utf-8') + b'\n')
+        url = b'L ' + url.encode('utf-8') + b'\n'
+        self.popen_handler.stdin.write(url)
         self.popen_handler.stdin.flush()
+        read_buf = BytesIO()
 
         endless_loop_cnt = 0
         while True:
             if not self.popen_handler:
                 break
+            if read_buf.closed:
+                break
 
-            strout = self.popen_handler.stdout.readline().decode('utf-8').strip()
+            strout = self.accumulate_read(read_buf)
+
+
             if strout[:2] == '@F':
                 # playing, update progress
                 out = strout.split(' ')
+                if len(out) < 5:
+                    continue
                 self.process_location = int(float(out[3]))
                 self.process_length = int(float(out[3]) + float(out[4]))
             elif strout[:2] == '@E':

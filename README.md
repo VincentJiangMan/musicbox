@@ -72,6 +72,12 @@ NetEase-MusicBox
 	<tr> <td>W</td> <td>Quit&Clear</td> <td>退出并清除用户信息</td> </tr>
 </table>
 
+### Windows安装
+**Windows版本尚在开发中，不推荐普通用户使用**
+
+如果出现中文字符显示重叠，推荐安装[Cmder](http://cmder.net/)并从中启动musicbox作为临时方案。
+
+    $ pip(3) install git+https://github.com/genzj/musicbox.git@win32
 
 ### PyPi安装（推荐）
 	$ pip(3) install NetEase-MusicBox
